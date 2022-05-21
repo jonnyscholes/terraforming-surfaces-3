@@ -48,11 +48,11 @@ export class Surface {
   }
 
   async init(onComplete) {
-    console.log("init");
+    // console.log("init");
     this.createBoxes();
     this.images = await this.loadImages();
     this.paintRects();
-    this.animate();
+    this.runFrames();
     console.log("before onComplete");
     onComplete(this.canvas);
   }
@@ -66,11 +66,11 @@ export class Surface {
       return imageCanvas(n, folder, this.width, this.height);
     });
 
-    if (EXTRA_COLOR) {
-      images.push(
-        imageCanvas(rArray([1, 2, 3]), "vivid", this.width, this.height)
-      );
-    }
+    // if (EXTRA_COLOR) {
+    images.push(
+      imageCanvas(rArray([1, 2, 3]), "vivid", this.width, this.height)
+    );
+    // }
     return Promise.all(images);
   }
 
@@ -188,10 +188,21 @@ export class Surface {
     );
   }
 
-  animate() {
+  runFrames() {
     for (let index = 0; index < ITERATIONS; index++) {
       this.render();
     }
+    this.ctx.drawImage(
+      this.canvas,
+      0,
+      0,
+      1,
+      this.canvas.height,
+      this.canvas.width - 1,
+      0,
+      1,
+      this.canvas.height
+    );
   }
 
   render() {
@@ -233,6 +244,6 @@ function imageCanvas(id, subfolder, width, height) {
       resolve(canvas);
     };
 
-    img.src = `./images/${subfolder}-${id}.png`;
+    img.src = `./images/${subfolder}/${id}.png`;
   });
 }
