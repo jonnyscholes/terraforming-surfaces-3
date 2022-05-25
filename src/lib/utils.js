@@ -72,4 +72,9 @@ function complementryRGBColor(r, g, b) {
   }
 }
 
-export { reshape, complementryRGBColor };
+function hexToVBColor(rrggbb) {
+  var bbggrr = rrggbb.substr(4, 2) + rrggbb.substr(2, 2) + rrggbb.substr(0, 2);
+  return parseInt(bbggrr, 16);
+}
+
+export { reshape, complementryRGBColor, hexToVBColor };

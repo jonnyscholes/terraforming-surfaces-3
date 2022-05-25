@@ -1,32 +1,25 @@
 import ShelfPack from "@mapbox/shelf-pack";
 const ndcv = require("ndarray-canvas");
-const blur = require("ndarray-gaussian-filter");
 const ndarray = require("ndarray");
 
-import { rRange, rArray, shuffleArray, toTitleCase } from "./fxhUtils";
+import { rRange, rArray } from "./fxhUtils";
 import sort from "./pixelSort";
+import { ClrGltchFast } from "./ClrGltchFast";
 
 const SIZE = 512;
-const MAX_IMGS = 5;
-
-const IMAGE_COUNT = rRange(2, MAX_IMGS);
 const UNIT_SIZE = rArray([32, 32, 64, 64, 128]);
-const COLOR_SCHEME = "dark";
-const EXTRA_COLOR = fxrand() < 0.1;
 const ITERATIONS = 5;
+const NUM_GLTCHS = 5;
 
-export class Surface {
+const IMG_KEY = "TS003";
+
+export class ClrGltchSurface {
   constructor(onComplete) {
-    console.log("*----------------------------------------------------------*");
-    console.log("* TODO - By @jonnyscholes - 2022 *");
-    console.log("*----------------------------------------------------------*");
-
     this.width = SIZE;
     this.height = SIZE;
 
     this.delay = rRange(100, 400);
 
-    this.imageCount = IMAGE_COUNT;
     this.quadrantSizes = [32, 64, 128, 256]; // TODO: Doesnt work when SIZE = 256
     this.unitSize = UNIT_SIZE;
     this.units = this.width / this.unitSize;
@@ -41,6 +34,7 @@ export class Surface {
 
     this.lastRender = 0;
     this.paused = false;
+    this.colorSpectrum = [];
 
     this.init(onComplete);
 
@@ -48,34 +42,89 @@ export class Surface {
   }
 
   async init(onComplete) {
-    // console.log("init");
-    this.createBoxes();
-    this.images = await this.loadImages();
-    this.paintRects();
-    this.runFrames();
-    console.log("before onComplete");
-    onComplete(this.canvas);
+    const imagesSaved = JSON.parse(localStorage.getItem(IMG_KEY));
+    if (!imagesSaved) {
+      this.createBoxes();
+      this.images = await this.loadImages();
+      this.paintRects();
+      this.runFrames();
+
+      localStorage.setItem(`${IMG_KEY}-img`, this.canvas.toDataURL());
+      localStorage.setItem(
+        `${IMG_KEY}-colors`,
+        JSON.stringify(this.colorSpectrum)
+      );
+
+      onComplete(this.canvas, this.colorSpectrum);
+      localStorage.setItem(IMG_KEY, true);
+    } else {
+      const data = localStorage.getItem(`${IMG_KEY}-img`);
+      const colors = JSON.parse(localStorage.getItem(`${IMG_KEY}-colors`));
+      this.colorSpectrum = colors;
+
+      const image = new Image();
+      image.onload = (_) => {
+        this.ctx.drawImage(image, 0, 0);
+        onComplete(this.canvas, this.colorSpectrum);
+      };
+      image.src = data;
+    }
+
+    this.addCanvas();
+  }
+
+  addCanvas() {
+    document.body.appendChild(this.canvas);
   }
 
   async loadImages() {
-    const nums = [1, 2, 3, 4, 5];
-    shuffleArray(nums);
-    const mixed = ["light", "dark", "light", "dark", rArray(["light", "dark"])];
-    const images = nums.slice(0, this.imageCount).map((n, i) => {
-      let folder = COLOR_SCHEME === "mixed" ? mixed[i] : COLOR_SCHEME;
-      return imageCanvas(n, folder, this.width, this.height);
-    });
+    const images = [];
 
-    // if (EXTRA_COLOR) {
-    images.push(
-      imageCanvas(rArray([1, 2, 3]), "vivid", this.width, this.height)
-    );
+    for (let i = 0; i < NUM_GLTCHS; i++) {
+      let c = new ClrGltchFast();
+      images.push(c.canvas);
+      this.colorSpectrum.push(...c.baseColors);
+    }
+
+    // const imagesSaved = JSON.parse(localStorage.getItem(IMG_KEY));
+    // console.log(imagesSaved);
+
+    // if (!imagesSaved) {
+    //   console.log("generate images");
+    //   for (let i = 0; i < NUM_GLTCHS; i++) {
+    //     let c = new ClrGltchFast();
+    //     images.push(c.canvas);
+
+    //     localStorage.setItem(`${IMG_KEY}-${i}`, c.canvas.toDataURL());
+    //     localStorage.setItem(
+    //       `${IMG_KEY}-${i}-colors`,
+    //       JSON.stringify(c.baseColors)
+    //     );
+
+    //     this.colorSpectrum.push(...c.baseColors);
+    //   }
+    //   localStorage.setItem(IMG_KEY, true);
+    // } else {
+    //   console.log("fetch saved images");
+    //   for (let i = 0; i < NUM_GLTCHS; i++) {
+    //     const data = localStorage.getItem(`${IMG_KEY}-${i}`);
+
+    //     const img = new Image();
+    //     img.src = data;
+    //     images.push(img);
+
+    //     const colors = JSON.parse(
+    //       localStorage.getItem(`${IMG_KEY}-${i}-colors`)
+    //     );
+    //     this.colorSpectrum.push(...colors);
+    //   }
     // }
-    return Promise.all(images);
+
+    return images;
   }
 
   pixelSort(x, y, w, h) {
-    var pixels = this.ctx.getImageData(x, y, w, h);
+    const pixels = this.ctx.getImageData(x, y, w, h);
     const imArr = ndarray(
       new Uint8Array(pixels.data),
       [w, h, 4],
@@ -96,8 +145,6 @@ export class Surface {
       filterIncludeAll,
       sortMethods[rRange(0, sortMethods.length - 1)]
     );
-
-    // blur(imArr, 1);
 
     const sortedCan = ndcv(
       null,
@@ -192,17 +239,6 @@ export class Surface {
     for (let index = 0; index < ITERATIONS; index++) {
       this.render();
     }
-    this.ctx.drawImage(
-      this.canvas,
-      0,
-      0,
-      1,
-      this.canvas.height,
-      this.canvas.width - 1,
-      0,
-      1,
-      this.canvas.height
-    );
   }
 
   render() {
@@ -226,24 +262,4 @@ export class Surface {
       this.paintRect(boxes[rRange(0, boxes.length - 1)]);
     }
   }
-}
-
-function imageCanvas(id, subfolder, width, height) {
-  return new Promise((resolve, reject) => {
-    const canvas = document.createElement("canvas");
-
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext("2d");
-
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-
-    img.onload = function () {
-      ctx.drawImage(img, 0, 0, canvas.width + 2, canvas.height + 2);
-      resolve(canvas);
-    };
-
-    img.src = `./images/${subfolder}/${id}.png`;
-  });
 }

@@ -1,7 +1,6 @@
 var sortarr = [];
 
 export default function pixelSort(image, filter, sorter) {
-  sort(image.transpose(1, 0, 2), filter, sorter);
   sort(image.transpose(0, 1, 2), filter, sorter);
   return image;
 }
@@ -15,8 +14,6 @@ function sort(image, filter, sorter) {
     var first = null;
     var next = null;
 
-    // Find the first pixel matching the filter,
-    // and the next pixel that doesn't match it.
     for (var y = 0; y < height; y++) {
       var matches = filter(slice.get(y, 0), slice.get(y, 1), slice.get(y, 2));
 

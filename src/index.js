@@ -1,30 +1,32 @@
 import chroma from "chroma-js";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
-import { MTLLoader } from "three/examples/jsm/loaders/MTLLoader.js";
-import { Reflector } from "three/examples/jsm/objects/Reflector.js";
 
-import { Surface } from "./lib/Surface";
-import { complementryRGBColor } from "./lib/utils";
+import { ClrGltchSurface } from "./lib/ClrGltchSurface";
+
+console.log("*----------------------------------------------------------*");
+console.log("* ClrGltchSurface - By @jonnyscholes - 2022 *");
+console.log("*----------------------------------------------------------*");
+
+const $container = document.querySelector(".container");
 
 document.addEventListener("DOMContentLoaded", function () {
-  new Surface((can) => {
-    new ArtMiner(can);
-    can.classList.add("surface");
-    document.body.appendChild(can);
+  new ClrGltchSurface((can, colorSpectrum) => {
+    $container.classList.remove("loading");
+    new ArtMiner(can, colorSpectrum);
   });
 });
 
 class ArtMiner {
-  constructor(surface) {
+  constructor(surface, spectrum) {
     const width = window.innerWidth;
     const height = window.innerHeight;
     const aspect = width / height;
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setSize(width, height);
-    document.body.appendChild(this.renderer.domElement);
+
+    $container.appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
     this.loader = new THREE.TextureLoader();
@@ -43,11 +45,14 @@ class ArtMiner {
 
     this.mapTexture = new THREE.CanvasTexture(surface);
     this.visualTexture = this.mapTexture;
-    // this.visualTexture.repeat.set(0.165, 1);
     this.visualTexture.repeat.set(1, 1);
 
-    const fgColor = chroma.random().saturate(10).luminance(0.5).rgb();
+    const fgColor = chroma.random().saturate(10).brighten(2).rgb();
     const bgColor = chroma.random().saturate(10).rgb();
+
+    const brightestColor = this.calcBrightestColor(spectrum);
+
+    this.displaceMod = 1 - brightestColor / 255;
 
     this.bgLightColor = new THREE.Color(chroma(bgColor).hex());
     this.fgLightColor = new THREE.Color(chroma(fgColor).hex());
@@ -55,23 +60,19 @@ class ArtMiner {
     this.init();
   }
 
-  async init() {
-    await this.loadHeightMap();
+  init() {
+    this.loadHeightMap();
     this.addLights();
     this.addEvents();
     this.animate();
   }
 
-  async loadHeightMap() {
-    // this.mapTexture = await this.loader.loadAsync(MAP_ASS);
-    // this.visualTexture = await this.loader.loadAsync(VIS_ASS);
-
+  loadHeightMap() {
     const depthMaterial = new THREE.MeshPhongMaterial({
       displacementMap: this.mapTexture,
-      // bumpMap: this.mapTexture,
       map: this.visualTexture,
       combine: THREE.AddOperation,
-      displacementScale: 30,
+      displacementScale: 20 + 20 * this.displaceMod,
       reflectivity: 0,
       shininess: 0,
       side: THREE.DoubleSide,
@@ -85,19 +86,19 @@ class ArtMiner {
     this.planetMesh.position.y = 0;
 
     this.scene.add(this.planetMesh);
+  }
 
-    // const mirrorGeom = new THREE.PlaneGeometry(40, 64);
-    // const groundMirror = new Reflector(mirrorGeom, {
-    //   clipBias: 0.003,
-    //   textureWidth: window.innerWidth * window.devicePixelRatio,
-    //   textureHeight: window.innerHeight * window.devicePixelRatio,
-    //   color: 0x0000ff,
-    // });
-    // groundMirror.rotateX((Math.PI / 5) * -1);
-    // groundMirror.position.y = 50;
-    // groundMirror.rotateX(-Math.PI / 2);
+  calcBrightestColor(colors) {
+    const reds = colors.map((c) => chroma(c).rgb()[0]);
+    let largest = 0;
 
-    // this.scene.add(groundMirror);
+    for (let i = 0; i <= reds.length - 1; i++) {
+      if (reds[i] > largest) {
+        largest = reds[i];
+      }
+    }
+
+    return largest;
   }
 
   addLights() {
@@ -108,7 +109,7 @@ class ArtMiner {
 
     var fogColor = new THREE.Color(this.bgLightColor);
     this.scene.background = fogColor; // Setting fogColor as the background color also
-    this.scene.fog = new THREE.Fog(fogColor, 1, 150);
+    this.scene.fog = new THREE.Fog(fogColor, 1, 100);
 
     var hemiLight = new THREE.HemisphereLight(
       this.fgLightColor,
