@@ -1,7 +1,16 @@
-window.fxrand = Math.random;
+import chroma from "chroma-js";
 
 export function rRange(from, to) {
   return (fxrand() * (to - from) + from).toFixed(0) * 1;
+}
+
+export function rChromaColor() {
+  const digits = "0123456789abcdef";
+  let code = "#";
+  for (let i = 0; i < 6; i++) {
+    code += digits.charAt(Math.floor(fxrand() * 16));
+  }
+  return chroma(code);
 }
 
 export function rrSet(max) {
