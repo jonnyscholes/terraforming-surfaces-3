@@ -3,9 +3,16 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
 import { ClrGltchSurface } from "./lib/ClrGltchSurface";
+import { rChromaColor, rRange } from "./lib/fxhUtils";
+
+const DISPLACEMENT_STRENGTH = rRange(5, 20);
+
+window.$fxhashFeatures = {
+  DisplacementStrength: DISPLACEMENT_STRENGTH,
+};
 
 console.log("*----------------------------------------------------------*");
-console.log("* ClrGltchSurface - By @jonnyscholes - 2022 *");
+console.log("* Terraforming Surfaces [003] - By @jonnyscholes - 2022 *");
 console.log("*----------------------------------------------------------*");
 
 const $container = document.querySelector(".container");
@@ -47,8 +54,8 @@ class ArtMiner {
     this.visualTexture = this.mapTexture;
     this.visualTexture.repeat.set(1, 1);
 
-    const fgColor = chroma.random().saturate(10).brighten(2).rgb();
-    const bgColor = chroma.random().saturate(10).rgb();
+    const fgColor = rChromaColor().saturate(10).brighten(2).rgb();
+    const bgColor = rChromaColor().saturate(10).rgb();
 
     const brightestColor = this.calcBrightestColor(spectrum);
 
@@ -72,7 +79,8 @@ class ArtMiner {
       displacementMap: this.mapTexture,
       map: this.visualTexture,
       combine: THREE.AddOperation,
-      displacementScale: 20 + 20 * this.displaceMod,
+      displacementScale:
+        DISPLACEMENT_STRENGTH + DISPLACEMENT_STRENGTH * this.displaceMod,
       reflectivity: 0,
       shininess: 0,
       side: THREE.DoubleSide,
@@ -158,7 +166,9 @@ class ArtMiner {
       }
       this.visualTexture.offset.set(offset, 0);
 
-      this.planetMesh.rotation.y += 0.005;
+      // this.planetMesh.rotation.y += 0.001; // SLOW
+      this.planetMesh.rotation.y += 0.005; // MEDIUM
+      // this.planetMesh.rotation.y += 0.009; // FAST
     }
 
     this.renderer.render(this.scene, this.camera);

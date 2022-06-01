@@ -2,7 +2,7 @@ const ndcv = require("ndarray-canvas");
 const ndarray = require("ndarray");
 import chroma from "chroma-js";
 
-import { rRange } from "./fxhUtils";
+import { rRange, rChromaColor } from "./fxhUtils";
 import sort from "./pixelSort";
 
 export class ClrGltchFast {
@@ -28,7 +28,7 @@ export class ClrGltchFast {
 
     this.baseColors = new Array(rRange(3, 5))
       .fill(false)
-      .map((_) => chroma.random().saturate(3).hex());
+      .map((_) => rChromaColor().saturate(3).hex());
 
     // this.baseColors = [6701143, 8086468, 15852659];
 

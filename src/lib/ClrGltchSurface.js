@@ -11,7 +11,8 @@ const UNIT_SIZE = rArray([32, 32, 64, 64, 128]);
 const ITERATIONS = 5;
 const NUM_GLTCHS = 5;
 
-const IMG_KEY = "TS003";
+const IMG_KEY = `TS003-${window.fxhash}`;
+const SKIP_CACHE = false;
 
 export class ClrGltchSurface {
   constructor(onComplete) {
@@ -43,7 +44,7 @@ export class ClrGltchSurface {
 
   async init(onComplete) {
     const imagesSaved = JSON.parse(localStorage.getItem(IMG_KEY));
-    if (!imagesSaved) {
+    if (!imagesSaved || SKIP_CACHE) {
       this.createBoxes();
       this.images = await this.loadImages();
       this.paintRects();
@@ -70,7 +71,7 @@ export class ClrGltchSurface {
       image.src = data;
     }
 
-    this.addCanvas();
+    // this.addCanvas();
   }
 
   addCanvas() {
